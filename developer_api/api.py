@@ -19,6 +19,7 @@ def submit_event():
         event_json = request.form
         event = Event.from_json(event_json)
     except ValueError:
+        beeline.add_context_field('event.failure.cause', 'from_json')
         return api_error(400)
 
     db.session.add(event)
@@ -37,12 +38,16 @@ def submit_event():
 def approve_event(event_id):
     api_key = request.args.get('api_key')
     if not api_key:
+        beeline.add_context_field('event.failure.cause', 'api_key')
         abort(401)
 
     event = Event.query.filter_by(id=event_id, api_key=api_key).one_or_none()
 
     if not event:
+        beeline.add_context_field('event.failure.cause', 'no_event')
         abort(404)
+
+    beeline.add_context_field('event', event.id)
 
     event.approved = True
     db.session.add(event)
@@ -68,9 +73,10 @@ def upcoming_events():
         start_date = datetime.strptime(request.args.get('start', date.today().strftime("%Y/%m/%d")), "%Y/%m/%d")
         end_date = datetime.strptime(request.args.get('end', (date.today() + relativedelta(months=6)).strftime("%Y/%m/%d")), "%Y/%m/%d")
     except ValueError:
+        beeline.add_context_field('event.failure.cause', 'args')
         return api_error(410)
 
-    events = Event.query.filter(Event.start_date <= end_date, Event.end_date >= start_date, Event.approved == True)
+    events = Event.query.filter(Event.start_date <= end_date, Event.end_date >= start_date, Event.approved == True).limit(limit)
     return jsonify([event.to_json() for event in events.order_by(Event.start_date.asc())])
 
 

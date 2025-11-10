@@ -1,7 +1,7 @@
 import json
 import requests
 
-from flask import url_for, current_app
+from flask import url_for
 from .settings import config
 from .models import Event
 import hashlib
@@ -47,7 +47,6 @@ def announce_new_event(event):
         }]
     }
 
-    current_app.logger.info(request_data)
     send_discord_webhook(request_data)
 
 def send_discord_webhook(request_data):
